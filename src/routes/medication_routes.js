@@ -7,36 +7,27 @@ const {
     create_medication,
     delete_medication,
     update_medication,
+    update_medication_status,
     view_medication,
     view_all_medication,
-    
+    view_medication_by_date,
+    get_refill_alerts,
+    refill_medication,
 } = require("../controllers/medication_controller.js");
 
-<<<<<<< HEAD
 router.use(user_auth);
 
 router.post("/", create_medication); // Create a new medication
 router.delete("/", delete_medication); // Delete a medication
-// router.put("/", update_medication); // Update a medication
+router.put("/", update_medication); // Update a medication
+router.post("/status", update_medication_status); // Update medication intake status (taken, skipped, not taken yet)
 router.get("/", view_medication);
 router.get("/all", view_all_medication);
+router.get("/bydate", view_medication_by_date);
+router.get("/refills", get_refill_alerts); // Get low stock and refill alerts
+router.post("/refill", refill_medication); // Refill medication stock
 
 // reminder_router.post("/medication/update", user_auth, update_medication);
 
 
 module.exports = router;
-=======
-reminder_router.post("/create", user_auth, create_medication);
-
-reminder_router.delete("/delete", user_auth, delete_medication);
-
-// reminder_router.post("/medication/update", user_auth, update_medication);
-
-reminder_router.get("/view", user_auth, view_medication);
-
-reminder_router.get("/view/all", user_auth, view_all_medication);
-
-
-
-module.exports = reminder_router;
->>>>>>> 35ade63db8b0b9408db9e3a1479990ac7ec80e02

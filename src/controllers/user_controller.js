@@ -8,12 +8,15 @@ const {
   profile_update,
   verifyOtp,
   update_Password,
-
+  google_auth,
+  update_fcm_token,
 } = require("../services/user_validation_service.js");
 
 const { profile_picture } = require("../services/profile_picture_service.js")
 
 exports.user_login = async (req, res) => {
+  console.log("login api hit by IP :", req.headers);
+
   try {
     const data = await user_login(req, res);
     if (data.success) {
@@ -52,7 +55,7 @@ exports.user_logout = async (req, res) => {
   }
 };
 
-exports.sendOtp = async (req, res) => {  
+exports.sendOtp = async (req, res) => {
   try {
     const data = await sendOtp(req, res);
     if (data.success) {
@@ -60,7 +63,7 @@ exports.sendOtp = async (req, res) => {
     } else {
       res.status(data.status).json(data);
     }
-  } catch (error) {    
+  } catch (error) {
     res.status(500).json({ message: "An unexpected error occurred" });
   }
 };
@@ -142,4 +145,25 @@ exports.profile_picture = async (req, res) => {
     console.log("Error:", error);
   }
 };
+
+exports.google_auth = async (req, res) => {
+  try {
+    const data = await google_auth(req, res);
+    res.status(data.status || 200).json(data);
+  } catch (error) {
+    console.error("Controller Google Auth Error:", error);
+    res.status(500).json({ success: false, message: "An unexpected error occurred during Google authentication" });
+  }
+};
+
+exports.update_fcm_token = async (req, res) => {
+  try {
+    const data = await update_fcm_token(req, res);
+    res.status(data.status || 200).json(data);
+  } catch (error) {
+    console.error("Controller update_fcm_token Error:", error);
+    res.status(500).json({ success: false, message: "An unexpected error occurred while updating FCM token" });
+  }
+};
+
 

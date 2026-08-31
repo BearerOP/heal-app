@@ -2,5 +2,5 @@
 /.env
 public/.DS_Store
 src/.DS_Store
-/.DS_Store
+.DS_Store
 /package-lock.json

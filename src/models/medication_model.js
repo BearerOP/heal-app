@@ -42,6 +42,10 @@ const logSchema = new mongoose.Schema({
     type: Boolean,
     default: false,
   },
+  dose_id: {
+    type: String,
+    required: false,
+  },
 }, { _id: false });
 
 /**
@@ -134,19 +138,35 @@ const medicationSchema = new mongoose.Schema({
           },
         },
       ],
+      stock: {
+        quantity: {
+          type: Number,
+          required: true,
+        },
+        remind: {
+          type: Boolean,
+          default: false,
+        },
+        threshold: {
+          type: Number,
+          default: 0,
+        },
+      },
       start_date: {
         type: Date,
         required: true,
         default: Date.now,
       },
+      end_date: {
+        type: Date,
+        required: false,
+        default: null,
+      },
       description: {
         type: String,
-        required: true,
+        required: false,
+        default: "",
         trim: true,
-      },
-      fills:{
-        type: Number,
-        default: 0,
       },
       logs: [logSchema],
       timestamp: {

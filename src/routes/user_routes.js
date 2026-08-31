@@ -17,12 +17,16 @@ const {
   profile_update,
   profile_picture,
   verifyOtp,
-  update_Password
+  update_Password,
+  google_auth,
+  update_fcm_token,
 } = require("../controllers/user_controller.js");
 
 router.post("/login", user_login);
 
 router.post("/register", user_register);
+
+router.post("/google-auth", google_auth);
 
 router.get("/logout", user_auth, user_logout);
 
@@ -31,6 +35,8 @@ router.post("/sendOtp", sendOtp);
 router.post("/verifyOtp", verifyOtp);
 
 router.use(user_auth);
+
+router.post("/fcm-token", update_fcm_token);
 
 router.post("/updatePassword", update_Password);
 

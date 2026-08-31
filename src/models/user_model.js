@@ -16,6 +16,15 @@ const userSchema = new mongoose.Schema({
     type: String,
     required: true,
   },
+  name:{
+    type: String,
+    required: true,
+  },
+  countryCode:{
+    type:String,
+    required: true,
+    default:"IN",
+  },
   mobile: {
     type: String,
     required: true,
@@ -53,11 +62,11 @@ const userSchema = new mongoose.Schema({
   },
   gender: {
     type: String,
-    enum: ["male", "female", "transMale", "transFemale", "nonBinary"],
+    enum: ["male", "female", "transmale", "transfemale", "nonbinary"],
   },
   food_preference: {
     type: String,
-    enum: ["vegetarian", "nonVegetarian", "vegan", "other"],
+    enum: ["vegetarian", "nonvegetarian", "vegan", "other"],
     default: "other",
   },
   auth_key: {
@@ -86,6 +95,16 @@ const userSchema = new mongoose.Schema({
       }
     },
   ],
+  weightUnit: {
+    type: String,
+    enum: ["kg", "lb"],
+    default: "kg",
+  },
+  heightUnit: {
+    type: String,
+    enum: ["cm", "in", "ft"],
+    default: "cm",
+  },
   created_at: {
     type: Date,
     default: Date.now,

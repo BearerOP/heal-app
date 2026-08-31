@@ -21,6 +21,10 @@ const waterSchema = new mongoose.Schema({
             type: Number,
             required: true,
           },
+          title: {
+            type: String,
+            default: "Water",
+          },
         },
       ],
       intakeTarget: {

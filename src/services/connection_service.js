@@ -1,5 +1,6 @@
 const user_model = require("../models/user_model");
 const mongoose = require("mongoose");
+const { sendNotification } = require("../../public/utils/notification.js");
 
 exports.send_request = async (req) => {
   try {
@@ -18,11 +19,26 @@ exports.send_request = async (req) => {
       };
     }
 
-    // Ensure requests is always an array
+    // Ensure arrays exist
     receiverData.requests = Array.isArray(receiverData.requests) ? receiverData.requests : [];
+    senderData.requests = Array.isArray(senderData.requests) ? senderData.requests : [];
+    senderData.connections = Array.isArray(senderData.connections) ? senderData.connections : [];
 
-    const existingRequest = receiverData.requests.find((request) =>
-      request.sender_id && request.sender_id.equals && request.sender_id.equals(senderID)
+    const alreadyConnected = senderData.connections.some(
+      (conn) => conn && conn.toString() === receiverData._id.toString()
+    );
+    if (alreadyConnected) {
+      return {
+        message: "You are already connected with this user",
+        success: false,
+      };
+    }
+
+    const existingRequest = receiverData.requests.find(
+      (request) =>
+        request.sender_id &&
+        request.sender_id.toString() === senderID.toString() &&
+        request.status === "pending"
     );
 
     if (existingRequest) {
@@ -46,6 +62,25 @@ exports.send_request = async (req) => {
     const updatedReceiverData = await receiverData.save();
 
     if (updatedReceiverData) {
+      // Send Mobile Push Notification to receiver
+      if (receiverData.notificationToken) {
+        try {
+          const senderName = senderData?.name || senderData?.username || "Someone";
+          await sendNotification(
+            receiverData.notificationToken,
+            `${senderName} invited you to join their Care Circle on Swasthya`,
+            "New Care Circle Invite",
+            {
+              type: "care_circle_invite",
+              senderId: senderID.toString(),
+              senderName: senderName,
+            }
+          );
+        } catch (notifErr) {
+          console.error("Error sending invite notification:", notifErr?.message || notifErr);
+        }
+      }
+
       return {
         message: "Request sent successfully",
         success: true,
@@ -110,7 +145,7 @@ exports.allConnections = async (req, res) => {
   }
 };
 
-// Update: Remove request from user's requests array if accepted
+// Update: Accept or Reject request from user's requests array
 exports.update_Request = async (req, res) => {
   try {
     const user = req.user;
@@ -118,7 +153,7 @@ exports.update_Request = async (req, res) => {
 
     // Validate input
     if (!senderId || !mongoose.Types.ObjectId.isValid(senderId)) {
-      return{
+      return {
         status: 400,
         success: false,
         message: "Invalid sender ID",
@@ -126,23 +161,24 @@ exports.update_Request = async (req, res) => {
     }
 
     if (!["accepted", "rejected"].includes(status)) {
-      return{
+      return {
         status: 400,  
         success: false,
         message: "Status must be either 'accepted' or 'rejected'",
       };
     }
 
-    // Find the request in user's requests array
-    console.log("User Requests:", user.requests);
-    console.log("Sender ID:", senderId);
+    user.requests = Array.isArray(user.requests) ? user.requests : [];
 
-    const requestIndex = user.requests.findIndex(request => 
-      request.sender_id.equals(senderId) && request.status === "pending"
+    const requestIndex = user.requests.findIndex(
+      (request) =>
+        request.sender_id &&
+        request.sender_id.toString() === senderId.toString() &&
+        request.status === "pending"
     );
 
     if (requestIndex === -1) {
-      return{
+      return {
         status: 404,  
         success: false,
         message: "Pending request not found",
@@ -152,29 +188,37 @@ exports.update_Request = async (req, res) => {
     // Get sender data
     const sender = await user_model.findById(senderId);
     if (!sender) {
-      return{
+      return {
         status: 404,    
         success: false,
         message: "Sender not found",
       };
     }
 
+    sender.requests = Array.isArray(sender.requests) ? sender.requests : [];
+    user.connections = Array.isArray(user.connections) ? user.connections : [];
+    sender.connections = Array.isArray(sender.connections) ? sender.connections : [];
+
     if (status === "accepted") {
       // ACCEPT REQUEST LOGIC
-      // Check if already connected
-      console.log("User Connections:", user.connections);
-      console.log("Sender Connections:", sender.connections);
-
-      const alreadyConnected = user.connections.some(conn => 
-        conn.equals(senderId)
-      ) || sender.connections.some(conn => 
-        conn.equals(user._id)
-      );
+      const alreadyConnected =
+        user.connections.some((conn) => conn && conn.toString() === senderId.toString()) ||
+        sender.connections.some((conn) => conn && conn.toString() === user._id.toString());
 
       if (alreadyConnected) {
-        return{
-          status: 400,
-          success: false,
+        // Remove pending request if already connected
+        user.requests.splice(requestIndex, 1);
+        const senderReqIndex = sender.requests.findIndex(
+          (reqItem) => reqItem.send_to && reqItem.send_to.toString() === user._id.toString()
+        );
+        if (senderReqIndex !== -1) {
+          sender.requests.splice(senderReqIndex, 1);
+        }
+        await Promise.all([user.save(), sender.save()]);
+
+        return {
+          status: 200,
+          success: true,
           message: "Already connected with this user",
         };
       }
@@ -185,12 +229,20 @@ exports.update_Request = async (req, res) => {
 
       // Remove the request from user's requests array
       user.requests.splice(requestIndex, 1);
-      sender.requests.splice(sender.requests.findIndex(req => req.send_to.equals(user._id)), 1);
+
+      // Remove the sent request from sender's requests array
+      const senderReqIndex = sender.requests.findIndex(
+        (reqItem) => reqItem.send_to && reqItem.send_to.toString() === user._id.toString()
+      );
+      if (senderReqIndex !== -1) {
+        sender.requests.splice(senderReqIndex, 1);
+      }
 
       // Save both users
       await Promise.all([user.save(), sender.save()]);
 
       return {
+        status: 200,
         success: true,
         message: "Request accepted and connection established",
         data: {
@@ -200,15 +252,19 @@ exports.update_Request = async (req, res) => {
       };
     } else {
       // REJECT REQUEST LOGIC
-      
-      // Update request status to rejected
-      user.requests[requestIndex].status = "rejected";
-      await user.save();
+      user.requests.splice(requestIndex, 1);
+      const senderReqIndex = sender.requests.findIndex(
+        (reqItem) => reqItem.send_to && reqItem.send_to.toString() === user._id.toString()
+      );
+      if (senderReqIndex !== -1) {
+        sender.requests.splice(senderReqIndex, 1);
+      }
+      await Promise.all([user.save(), sender.save()]);
 
       return {
         status: 200,
         success: true,
-        message: "Request rejected",
+        message: "Request declined",
         data: {
           user,
         },
@@ -336,20 +392,56 @@ exports.allRequest = async (req, res) => {
     if (user_id) {
       const user_data = await user_model.findOne({ _id: user_id });
 
-      // Populate sender's name for each request
-      let allSenderData = [];
-      for (const sender of user_data.requests) {
-        let senderData = await user_model
-          .findOne({ _id: sender.sender_id })
-          .select("-password -auth_key -notificationToken -connections -requests")
-          .exec();
-        allSenderData.push(senderData);
+      let receivedRequests = [];
+      let sentRequests = [];
 
+      if (user_data && Array.isArray(user_data.requests)) {
+        for (const reqItem of user_data.requests) {
+          if (reqItem.sender_id && reqItem.status === "pending") {
+            let senderData = await user_model
+              .findOne({ _id: reqItem.sender_id })
+              .select("-password -auth_key -notificationToken -connections -requests")
+              .lean()
+              .exec();
+
+            if (senderData) {
+              receivedRequests.push({
+                ...senderData,
+                id: reqItem.sender_id.toString(),
+                senderId: reqItem.sender_id.toString(),
+                requestId: reqItem._id.toString(),
+                status: reqItem.status,
+                createdAt: reqItem._id?.getTimestamp ? reqItem._id.getTimestamp() : new Date(),
+              });
+            }
+          } else if (reqItem.send_to && reqItem.status === "pending") {
+            let receiverData = await user_model
+              .findOne({ _id: reqItem.send_to })
+              .select("-password -auth_key -notificationToken -connections -requests")
+              .lean()
+              .exec();
+
+            if (receiverData) {
+              sentRequests.push({
+                ...receiverData,
+                id: reqItem.send_to.toString(),
+                receiverId: reqItem.send_to.toString(),
+                requestId: reqItem._id.toString(),
+                status: reqItem.status,
+                createdAt: reqItem._id?.getTimestamp ? reqItem._id.getTimestamp() : new Date(),
+              });
+            }
+          }
+        }
       }
+
       return {
         success: true,
-        message:"All Relatives' Requests fetched",
-        connections: allSenderData,
+        message: "All requests fetched successfully",
+        connections: receivedRequests,
+        requests: receivedRequests,
+        receivedRequests,
+        sentRequests,
       };
     }
   } catch (error) {
@@ -360,7 +452,53 @@ exports.allRequest = async (req, res) => {
       message: error.message,
     };
   }
-}
+};
+
+exports.cancel_Request = async (req, res) => {
+  try {
+    const user = req.user;
+    const { receiverId } = req.body;
+
+    if (!receiverId || !mongoose.Types.ObjectId.isValid(receiverId)) {
+      return {
+        status: 400,
+        success: false,
+        message: "Invalid receiver ID",
+      };
+    }
+
+    const receiver = await user_model.findById(receiverId);
+
+    // Remove sent request from user
+    if (user.requests && Array.isArray(user.requests)) {
+      user.requests = user.requests.filter(
+        (r) => !(r.send_to && r.send_to.toString() === receiverId.toString())
+      );
+      await user.save();
+    }
+
+    // Remove received request from receiver
+    if (receiver && receiver.requests && Array.isArray(receiver.requests)) {
+      receiver.requests = receiver.requests.filter(
+        (r) => !(r.sender_id && r.sender_id.toString() === user._id.toString())
+      );
+      await receiver.save();
+    }
+
+    return {
+      status: 200,
+      success: true,
+      message: "Request cancelled successfully",
+    };
+  } catch (error) {
+    console.error("Error cancelling request:", error);
+    return {
+      status: 500,
+      success: false,
+      message: error.message || "Internal Server Error",
+    };
+  }
+};
 
 exports.findUserById = async (req, res) => {
   try {

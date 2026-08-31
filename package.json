@@ -47,5 +47,8 @@
   "bugs": {
     "url": "https://github.com/BearerOP/heal-app/issues"
   },
-  "homepage": "https://github.com/BearerOP/heal-app#readme"
+  "homepage": "https://github.com/BearerOP/heal-app#readme",
+  "devDependencies": {
+    "patch-package": "^8.0.1"
+  }
 }

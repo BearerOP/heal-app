@@ -9,7 +9,8 @@ const {
     exercises_name,
     exercises_bodyPart_target,
     all_workout_plans,
-    workout_plans_muscles
+    workout_plans_muscles,
+    add_workout
  } = require('../services/workout_planner_service.js');
 
 exports.exercises_all = async (req, res) => {
@@ -145,6 +146,24 @@ exports.all_target_muscles = async (req, res) => {
         res.status(200).json(data.data);
       }
     } catch (error) {
+        res.status(500).json(data);
+    }
+  };
+
+  exports.add_workout = async (req, res) => {
+    try {
+      const data = await add_workout(req,res);
+      console.log("data from controller",data);
+      
+      if (data.success) {
+        res.status(data.status).json(data);
+      }
+      else{
+        res.status(data.status).json(data);
+      }
+    } catch (error) {
+      console.log("error from controller",error);
+      
         res.status(500).json(data);
     }
   };

@@ -155,6 +155,6 @@ async function verifyOtp(mobile, otp) {
             message: "An error occurred while verifying the OTP",
         };
     }
-}
+ };
 
 module.exports = {sendOtp, verifyOtp};

@@ -1,4 +1,4 @@
-const user_model = require("../models/user_model");
+const exercise_model = require("../models/exercise_model");
 const axios = require("axios");
 const host = process.env.EXERCISE_API_HOST;
 
@@ -319,3 +319,52 @@ exports.workout_plans_muscles = async (req, res) => {
     };
   }
 };
+
+exports.add_workout=async(req,res)=>{
+  const user = await req.user;
+  // console.log("user",user);
+  console.log("req.body",req.body);
+  if (!user) {
+    return {
+      status: 404,
+      success: false,
+      message: "User not found",
+    };
+  }
+  const {target,name,time,caloriesBurn,status,weekDays}=req.body;
+  
+  try{
+  const newWorkout= await exercise_model.create({
+    userId:user._id,
+    exerciseId:Math.random().toString(36).substring(7),
+    target,
+    name,
+    time,
+    caloriesBurn,
+    // doneAt,
+    status,
+    weekDays,
+  });
+  console.log("newWorkout",newWorkout);
+  
+  if(!newWorkout){
+    return {
+      status: 400,
+      success: false,
+      message: "Workout not added",
+    };  
+  }
+    return {
+      status: 200,
+      success: true,
+      message: "Workout added successfully",
+      newWorkout,
+    };
+  }catch(error){
+    return {
+      status: 500,
+      success: false,
+      message: "Internal Server Error",
+    };
+  }
+}

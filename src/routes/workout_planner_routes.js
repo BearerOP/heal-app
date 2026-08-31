@@ -15,6 +15,7 @@ const {
   exercises_bodyPart_target,
   all_workout_plans,
   workout_plans_muscles,
+  add_workout,
 } = require("../controllers/workout_planner_controller.js");
 
 router.get("/all_exercises", user_auth, exercises_all);
@@ -38,5 +39,7 @@ router.get("/exercises/bodyPart/target", user_auth, exercises_bodyPart_target);
 router.get("/all/workout_plans", user_auth, all_workout_plans);
 
 router.get("/workout_plans/muscles", user_auth, workout_plans_muscles);
+
+router.post("/add_workout", user_auth, add_workout);
 
 module.exports = router;

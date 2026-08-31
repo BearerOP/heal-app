@@ -228,6 +228,7 @@ exports.sendOtp = async (req, res) => {
       };
     }
     const result = await sendOtp(mobile);
+    
 
     if (!result.success) {
       return {

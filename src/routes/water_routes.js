@@ -7,8 +7,8 @@ const {
 } = require('../controllers/water_controller.js')
 
 const user_auth = require("../../middleware/user_auth.js");
-
-router.get("/water",user_auth, getWaterController);
-router.put("/water",user_auth, updateWaterController);
+router.use(user_auth);
+router.get("/", getWaterController);
+router.put("/", updateWaterController);
 
 module.exports = router;

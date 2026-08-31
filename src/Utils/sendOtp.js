@@ -1,6 +1,6 @@
 const TeleSignSDK = require("telesignsdk");
 const { storeOtp, viewStoredOtps } = require("./mapstore");
-const { default: axios, head } = require("axios");
+const { default: axios } = require("axios");
 
 const customerId = process.env.CUSTOMER_ID;
 const apiKey = process.env.API_KEY;
@@ -77,39 +77,84 @@ const client = new TeleSignSDK(customerId, apiKey);
 //         };
 //     }
 // }
- const sendOtp = async (mobile) => {
+
+async function sendOtp(mobile) {
     try {
-        const otp = Math.floor(100000 + Math.random() * 900000);
-        const message = `Your OTP-Verification OTP is ${otp}`;
-        const response = await axios.post(process.env.RAJDOOT_API_URL,{
-            recipient: mobile,
-            content: message,
-        },{
-            headers:{
-                'x-api-id': process.env.RAJDOOT_API_ID,
-                'x-api-key': process.env.RAJDOOT_API_KEY,
+        const response = await axios.post(`${process.env.RAJDOOT_API_HOST}/messages/send-otp`,
+            {
+              recipient: mobile,
+              otp_length: 6
+            },
+            {
+              headers: {
+                'x-api-id': process.env.RAJDOOT_API_ID || 'undefined',
+                'x-api-key': process.env.RAJDOOT_API_KEY || 'undefined',
+                'Content-Type': 'application/json'
+              }
             }
-        });
-        
-        if (response.data.success !== true) {
+          );
+
+          if (response.data.status) {
             return {
+                status: 200,
+                success: true,
+                message: "OTP sent successfully",
+            };
+          }
+          console.log("Response from RajDoot API:", response.data);
+          
+        
+    } catch (error) {
+        console.log("Error sending OTP:", error);
+        
+        console.error("Error sending OTP:", error.message);
+        return {
+            status: 500,
+            success: false,
+            message: "An error occurred while sending the OTP",
+        };
+        
+    }
+}
+async function verifyOtp(mobile, otp) {
+    try {
+        const response = await axios.post(`${process.env.RAJDOOT_API_HOST}/messages/verify-otp`,
+            {
+                recipient: mobile,
+                otp: otp
+            },
+            {
+                headers: {
+                    'x-api-id': process.env.RAJDOOT_API_ID || 'undefined',
+                    'x-api-key': process.env.RAJDOOT_API_KEY || 'undefined',
+                    'Content-Type': 'application/json'
+                }
+            }
+        );
+        console.log("Response from RajDoot API:", response.data);
+        if (response.data.status) {
+           return {
+                status: 200,
+                success: true,
+                message: "OTP verified successfully",
+            };
+        } else {
+            return {
+                status: 500,
                 success: false,
-                message: 'Failed to send SMS',
+                message: "Failed to verify OTP",
+                data: response.data,
             };
         }
-            await storeOtp(mobile, otp);
-        return {
-            success: true,
-            message: "OTP sent successfully",
-        };
-    } catch (error) {
-        console.log(error);
         
+    } catch (error) {
+        console.error("Error verifying OTP:", error);
         return {
+            status: 500,
             success: false,
-            message: "Unable to send SMS due to an internal error",
+            message: "An error occurred while verifying the OTP",
         };
     }
  };
 
-module.exports = sendOtp;
+module.exports = {sendOtp, verifyOtp};

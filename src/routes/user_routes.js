@@ -30,14 +30,16 @@ router.post("/sendOtp", sendOtp);
 
 router.post("/verifyOtp", verifyOtp);
 
-router.post("/updatePassword",user_auth, update_Password);
+router.use(user_auth);
 
-router.get("/profile", user_auth, user_profile);
+router.post("/updatePassword", update_Password);
 
-router.get("/allUsers", user_auth, allUsers);
+router.get("/", user_profile);
 
-router.put("/profile/update", user_auth, profile_update);
+router.get("/allUsers", allUsers);
 
-router.post("/profile/picture", user_auth, upload.single("file"), profile_picture);
+router.put("/", profile_update);
+
+router.post("/profile/picture", upload.single("file"), profile_picture);
 
 module.exports = router;

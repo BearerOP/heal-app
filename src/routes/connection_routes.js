@@ -1,4 +1,4 @@
-const {send_request,alluser, allRequest, update_Request, findUserById, allConnections} = require("../controllers/connection_controller.js")
+const {send_request, alluser, allRequest, update_Request, findUserById, allConnections, cancel_Request} = require("../controllers/connection_controller.js")
 const express = require("express");
 const router = express.Router();
 
@@ -8,7 +8,8 @@ router.use(user_auth);
 
 router.post("/",  send_request);
 router.get("/",  allConnections);
-router.put("/",update_Request)
+router.put("/", update_Request);
+router.delete("/cancelRequest", cancel_Request);
 router.get("/allRequest",  allRequest);
 router.get("/findUser", findUserById);
 // router.get("/alluser",  alluser);
